@@ -1,0 +1,9 @@
+{
+  "name": "examples",
+  "version": "0.1.0",
+  "description": "Sample projects and usage examples",
+  "type": "documentation",
+  "category": "documentation",
+  "maintainers": [{"name": "Modsynth Team"}],
+  "repository": {"type": "git", "url": "https://github.com/modsynth/examples.git"}
+}
