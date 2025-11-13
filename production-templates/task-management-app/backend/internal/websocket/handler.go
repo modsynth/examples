@@ -1,4 +1,4 @@
-package handlers
+package websocket
 
 import (
 	"log"
@@ -7,7 +7,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	ws "github.com/modsynth/task-management-app/internal/websocket"
 )
 
 var upgrader = websocket.Upgrader{
@@ -19,10 +18,10 @@ var upgrader = websocket.Upgrader{
 }
 
 type WebSocketHandler struct {
-	hub *ws.Hub
+	hub *Hub
 }
 
-func NewWebSocketHandler(hub *ws.Hub) *WebSocketHandler {
+func NewWebSocketHandler(hub *Hub) *WebSocketHandler {
 	return &WebSocketHandler{
 		hub: hub,
 	}
@@ -36,7 +35,8 @@ func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 		return
 	}
 
-	userID, exists := c.Get("user_id")
+	// Get user ID from auth middleware context
+	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -48,7 +48,7 @@ func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 		return
 	}
 
-	client := ws.NewClient(h.hub, conn, uint(projectID), userID.(uint))
+	client := NewClient(h.hub, conn, uint(projectID), userID.(uint))
 	h.hub.Register(client)
 
 	go client.WritePump()
