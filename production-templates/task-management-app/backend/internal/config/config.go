@@ -12,7 +12,7 @@ type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
 	Redis    RedisConfig
-	JWT      JWTConfig
+	Auth     AuthConfig
 	SMTP     SMTPConfig
 }
 
@@ -37,10 +37,10 @@ type RedisConfig struct {
 	DB       int
 }
 
-type JWTConfig struct {
-	Secret     string
-	AccessTTL  time.Duration
-	RefreshTTL time.Duration
+type AuthConfig struct {
+	JWTSecret     string
+	JWTExpiration int // in minutes
+	RefreshTTL    time.Duration
 }
 
 type SMTPConfig struct {
@@ -73,10 +73,10 @@ func Load() (*Config, error) {
 			Password: getEnv("REDIS_PASSWORD", ""),
 			DB:       0,
 		},
-		JWT: JWTConfig{
-			Secret:     getEnv("JWT_SECRET", "your-secret-key-change-this"),
-			AccessTTL:  parseDuration(getEnv("JWT_ACCESS_TTL", "15m")),
-			RefreshTTL: parseDuration(getEnv("JWT_REFRESH_TTL", "168h")),
+		Auth: AuthConfig{
+			JWTSecret:     getEnv("JWT_SECRET", "your-secret-key-change-this-in-production"),
+			JWTExpiration: parseInt(getEnv("JWT_EXPIRATION", "15")),  // default 15 minutes
+			RefreshTTL:    parseDuration(getEnv("JWT_REFRESH_TTL", "168h")), // default 7 days
 		},
 		SMTP: SMTPConfig{
 			Host:     getEnv("SMTP_HOST", "smtp.gmail.com"),
@@ -114,4 +114,13 @@ func parseDuration(s string) time.Duration {
 		return 15 * time.Minute
 	}
 	return d
+}
+
+func parseInt(s string) int {
+	var i int
+	fmt.Sscanf(s, "%d", &i)
+	if i == 0 {
+		return 15
+	}
+	return i
 }

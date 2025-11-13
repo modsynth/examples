@@ -1,6 +1,10 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+)
 
 type UserRole string
 
@@ -13,8 +17,9 @@ type User struct {
 	ID           uint      `json:"id" gorm:"primaryKey"`
 	Email        string    `json:"email" gorm:"uniqueIndex;not null"`
 	PasswordHash string    `json:"-" gorm:"not null"`
-	Name         string    `json:"name" gorm:"not null"`
-	Avatar       string    `json:"avatar"`
+	Username     string    `json:"username" gorm:"uniqueIndex;not null"`
+	FullName     string    `json:"full_name"`
+	AvatarURL    string    `json:"avatar_url"`
 	Role         UserRole  `json:"role" gorm:"not null;default:'user'"`
 	IsActive     bool      `json:"is_active" gorm:"not null;default:true"`
 	CreatedAt    time.Time `json:"created_at"`
@@ -24,7 +29,9 @@ type User struct {
 type RegisterRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=8"`
-	Name     string `json:"name" binding:"required"`
+	Username string `json:"username" binding:"required,min=3"`
+	FullName string `json:"full_name"`
+	AvatarURL string `json:"avatar_url"`
 }
 
 type LoginRequest struct {
@@ -32,8 +39,17 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
-type LoginResponse struct {
+type AuthResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	User         *User  `json:"user"`
+	ExpiresIn    int    `json:"expires_in"`
+}
+
+type JWTClaims struct {
+	UserID    uint   `json:"user_id"`
+	Email     string `json:"email"`
+	Username  string `json:"username"`
+	TokenType string `json:"token_type"` // "access" or "refresh"
+	jwt.RegisteredClaims
 }

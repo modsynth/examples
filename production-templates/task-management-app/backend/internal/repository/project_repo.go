@@ -3,7 +3,7 @@ package repository
 import (
 	"fmt"
 
-	"github.com/modsynth/task-management-app/internal/domain"
+	"task-management-app/internal/domain"
 	"gorm.io/gorm"
 )
 
@@ -15,8 +15,9 @@ type ProjectRepository interface {
 	Delete(id uint) error
 	AddMember(member *domain.ProjectMember) error
 	RemoveMember(projectID, userID uint) error
+	UpdateMember(member *domain.ProjectMember) error
 	GetMember(projectID, userID uint) (*domain.ProjectMember, error)
-	GetMembers(projectID uint) ([]*domain.ProjectMember, error)
+	GetMembers(projectID uint) ([]domain.ProjectMember, error)
 }
 
 type projectRepository struct {
@@ -93,6 +94,13 @@ func (r *projectRepository) RemoveMember(projectID, userID uint) error {
 	return nil
 }
 
+func (r *projectRepository) UpdateMember(member *domain.ProjectMember) error {
+	if err := r.db.Save(member).Error; err != nil {
+		return fmt.Errorf("failed to update project member: %w", err)
+	}
+	return nil
+}
+
 func (r *projectRepository) GetMember(projectID, userID uint) (*domain.ProjectMember, error) {
 	var member domain.ProjectMember
 	err := r.db.Where("project_id = ? AND user_id = ?", projectID, userID).
@@ -106,8 +114,8 @@ func (r *projectRepository) GetMember(projectID, userID uint) (*domain.ProjectMe
 	return &member, nil
 }
 
-func (r *projectRepository) GetMembers(projectID uint) ([]*domain.ProjectMember, error) {
-	var members []*domain.ProjectMember
+func (r *projectRepository) GetMembers(projectID uint) ([]domain.ProjectMember, error) {
+	var members []domain.ProjectMember
 	err := r.db.Where("project_id = ?", projectID).Preload("User").Find(&members).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to get project members: %w", err)

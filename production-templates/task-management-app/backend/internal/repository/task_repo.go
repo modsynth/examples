@@ -3,7 +3,7 @@ package repository
 import (
 	"fmt"
 
-	"github.com/modsynth/task-management-app/internal/domain"
+	"task-management-app/internal/domain"
 	"gorm.io/gorm"
 )
 
@@ -16,12 +16,16 @@ type TaskRepository interface {
 	Delete(id uint) error
 	Move(taskID, boardID uint, position int) error
 	AddComment(comment *domain.Comment) error
+	GetComment(commentID uint) (*domain.Comment, error)
+	DeleteComment(commentID uint) error
 	GetComments(taskID uint) ([]*domain.Comment, error)
 	AddAttachment(attachment *domain.Attachment) error
 	GetAttachments(taskID uint) ([]*domain.Attachment, error)
 	AddChecklistItem(item *domain.ChecklistItem) error
+	GetChecklistItem(itemID uint) (*domain.ChecklistItem, error)
 	UpdateChecklistItem(item *domain.ChecklistItem) error
 	DeleteChecklistItem(id uint) error
+	AssignLabels(taskID uint, labelIDs []uint) error
 }
 
 type taskRepository struct {
@@ -134,6 +138,26 @@ func (r *taskRepository) AddComment(comment *domain.Comment) error {
 	if err := r.db.Create(comment).Error; err != nil {
 		return fmt.Errorf("failed to add comment: %w", err)
 	}
+	// Reload comment with user
+	return r.db.Preload("User").First(comment, comment.ID).Error
+}
+
+func (r *taskRepository) GetComment(commentID uint) (*domain.Comment, error) {
+	var comment domain.Comment
+	err := r.db.Preload("User").First(&comment, commentID).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("comment not found with id %d", commentID)
+		}
+		return nil, fmt.Errorf("failed to get comment: %w", err)
+	}
+	return &comment, nil
+}
+
+func (r *taskRepository) DeleteComment(commentID uint) error {
+	if err := r.db.Delete(&domain.Comment{}, commentID).Error; err != nil {
+		return fmt.Errorf("failed to delete comment: %w", err)
+	}
 	return nil
 }
 
@@ -177,6 +201,18 @@ func (r *taskRepository) AddChecklistItem(item *domain.ChecklistItem) error {
 	return nil
 }
 
+func (r *taskRepository) GetChecklistItem(itemID uint) (*domain.ChecklistItem, error) {
+	var item domain.ChecklistItem
+	err := r.db.First(&item, itemID).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("checklist item not found with id %d", itemID)
+		}
+		return nil, fmt.Errorf("failed to get checklist item: %w", err)
+	}
+	return &item, nil
+}
+
 func (r *taskRepository) UpdateChecklistItem(item *domain.ChecklistItem) error {
 	if err := r.db.Save(item).Error; err != nil {
 		return fmt.Errorf("failed to update checklist item: %w", err)
@@ -188,5 +224,30 @@ func (r *taskRepository) DeleteChecklistItem(id uint) error {
 	if err := r.db.Delete(&domain.ChecklistItem{}, id).Error; err != nil {
 		return fmt.Errorf("failed to delete checklist item: %w", err)
 	}
+	return nil
+}
+
+func (r *taskRepository) AssignLabels(taskID uint, labelIDs []uint) error {
+	var task domain.Task
+	if err := r.db.First(&task, taskID).Error; err != nil {
+		return fmt.Errorf("task not found: %w", err)
+	}
+
+	// Clear existing labels
+	if err := r.db.Model(&task).Association("Labels").Clear(); err != nil {
+		return fmt.Errorf("failed to clear labels: %w", err)
+	}
+
+	// Assign new labels
+	if len(labelIDs) > 0 {
+		var labels []domain.Label
+		if err := r.db.Find(&labels, labelIDs).Error; err != nil {
+			return fmt.Errorf("failed to find labels: %w", err)
+		}
+		if err := r.db.Model(&task).Association("Labels").Append(&labels); err != nil {
+			return fmt.Errorf("failed to assign labels: %w", err)
+		}
+	}
+
 	return nil
 }

@@ -1,4 +1,4 @@
-module github.com/modsynth/task-management-app
+module task-management-app
 
 go 1.21
 

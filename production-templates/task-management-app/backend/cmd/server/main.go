@@ -11,12 +11,16 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/modsynth/task-management-app/internal/api/handlers"
-	"github.com/modsynth/task-management-app/internal/config"
-	"github.com/modsynth/task-management-app/internal/domain"
-	"github.com/modsynth/task-management-app/internal/websocket"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"task-management-app/internal/config"
+	"task-management-app/internal/domain"
+	"task-management-app/internal/handler"
+	"task-management-app/internal/middleware"
+	"task-management-app/internal/repository"
+	"task-management-app/internal/service"
+	"task-management-app/internal/websocket"
 )
 
 func main() {
@@ -41,30 +45,39 @@ func main() {
 	hub := websocket.NewHub()
 	go hub.Run()
 
+	// Initialize repositories
+	userRepo := repository.NewUserRepository(db)
+	projectRepo := repository.NewProjectRepository(db)
+	boardRepo := repository.NewBoardRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
+
+	// Initialize services
+	authService := service.NewAuthService(userRepo, cfg.Auth.JWTSecret, time.Duration(cfg.Auth.JWTExpiration)*time.Minute)
+	projectService := service.NewProjectService(projectRepo, userRepo)
+	boardService := service.NewBoardService(boardRepo, projectRepo, hub)
+	taskService := service.NewTaskService(taskRepo, boardRepo, projectRepo, hub)
+
+	// Initialize handlers
+	authHandler := handler.NewAuthHandler(authService)
+	projectHandler := handler.NewProjectHandler(projectService)
+	boardHandler := handler.NewBoardHandler(boardService)
+	taskHandler := handler.NewTaskHandler(taskService)
+	wsHandler := websocket.NewWebSocketHandler(hub)
+
 	// Set gin mode
 	if cfg.Server.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
 	// Create router
-	router := gin.Default()
+	router := gin.New()
 
-	// CORS middleware
-	router.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")
+	// Global middleware
+	router.Use(middleware.LoggerMiddleware())
+	router.Use(middleware.CORSMiddleware())
+	router.Use(gin.Recovery())
 
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	})
-
-	// Health check endpoints
+	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status": "ok",
@@ -72,44 +85,90 @@ func main() {
 		})
 	})
 
-	// Initialize handlers
-	wsHandler := handlers.NewWebSocketHandler(hub)
-
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
-		// WebSocket endpoint
-		v1.GET("/ws/:projectId", wsHandler.HandleConnection)
-		v1.GET("/projects/:projectId/online-users", wsHandler.GetOnlineUsers)
-
-		// Auth routes (placeholder)
+		// Public routes (no auth required)
 		auth := v1.Group("/auth")
 		{
-			auth.POST("/register", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented yet"}) })
-			auth.POST("/login", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented yet"}) })
+			auth.POST("/register", authHandler.Register)
+			auth.POST("/login", authHandler.Login)
+			auth.POST("/refresh", authHandler.RefreshToken)
 		}
 
-		// Projects routes (placeholder)
-		projects := v1.Group("/projects")
+		// WebSocket endpoint (requires auth)
+		v1.GET("/ws/:projectId", middleware.AuthMiddleware(cfg.Auth.JWTSecret), wsHandler.HandleConnection)
+
+		// Protected routes (require authentication)
+		protected := v1.Group("")
+		protected.Use(middleware.AuthMiddleware(cfg.Auth.JWTSecret))
 		{
-			projects.GET("", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented yet"}) })
-			projects.POST("", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented yet"}) })
-			projects.GET("/:id", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented yet"}) })
-		}
+			// Profile routes
+			protected.GET("/profile", authHandler.GetProfile)
 
-		// Tasks routes (placeholder)
-		v1.GET("/projects/:projectId/tasks", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented yet"}) })
-		v1.POST("/projects/:projectId/tasks", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented yet"}) })
-		v1.GET("/tasks/:id", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented yet"}) })
-		v1.PUT("/tasks/:id", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented yet"}) })
-		v1.DELETE("/tasks/:id", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented yet"}) })
-		v1.PUT("/tasks/:id/move", func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented yet"}) })
+			// Project routes
+			projects := protected.Group("/projects")
+			{
+				projects.GET("", projectHandler.List)
+				projects.POST("", projectHandler.Create)
+				projects.GET("/:id", projectHandler.GetByID)
+				projects.PUT("/:id", projectHandler.Update)
+				projects.DELETE("/:id", projectHandler.Delete)
+				projects.POST("/:id/archive", projectHandler.Archive)
+				projects.POST("/:id/unarchive", projectHandler.Unarchive)
+
+				// Project members
+				projects.GET("/:id/members", projectHandler.GetMembers)
+				projects.POST("/:id/members", projectHandler.AddMember)
+				projects.DELETE("/:id/members/:memberID", projectHandler.RemoveMember)
+				projects.PUT("/:id/members/:memberID/role", projectHandler.UpdateMemberRole)
+
+				// Project online users (WebSocket)
+				projects.GET("/:projectId/online-users", wsHandler.GetOnlineUsers)
+			}
+
+			// Board routes
+			boards := protected.Group("")
+			{
+				boards.POST("/projects/:projectID/boards", boardHandler.Create)
+				boards.GET("/projects/:projectID/boards", boardHandler.ListByProject)
+				boards.GET("/boards/:id", boardHandler.GetByID)
+				boards.PUT("/boards/:id", boardHandler.Update)
+				boards.DELETE("/boards/:id", boardHandler.Delete)
+			}
+
+			// Task routes
+			tasks := protected.Group("")
+			{
+				tasks.POST("/boards/:boardID/tasks", taskHandler.Create)
+				tasks.GET("/boards/:boardID/tasks", taskHandler.ListByBoard)
+				tasks.GET("/tasks/:id", taskHandler.GetByID)
+				tasks.PUT("/tasks/:id", taskHandler.Update)
+				tasks.DELETE("/tasks/:id", taskHandler.Delete)
+				tasks.POST("/tasks/:id/move", taskHandler.Move)
+
+				// Task comments
+				tasks.POST("/tasks/:id/comments", taskHandler.AddComment)
+				tasks.DELETE("/tasks/:id/comments/:commentID", taskHandler.DeleteComment)
+
+				// Task checklist
+				tasks.POST("/tasks/:id/checklist", taskHandler.AddChecklistItem)
+				tasks.PUT("/tasks/:id/checklist/:itemID", taskHandler.UpdateChecklistItem)
+				tasks.DELETE("/tasks/:id/checklist/:itemID", taskHandler.DeleteChecklistItem)
+
+				// Task labels
+				tasks.POST("/tasks/:id/labels", taskHandler.AssignLabels)
+			}
+		}
 	}
 
 	// Start server
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%s", cfg.Server.Port),
-		Handler: router,
+		Addr:           fmt.Sprintf(":%s", cfg.Server.Port),
+		Handler:        router,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
 	}
 
 	// Graceful shutdown
@@ -121,6 +180,7 @@ func main() {
 
 	log.Printf("Server started on port %s (env: %s)", cfg.Server.Port, cfg.Server.Env)
 	log.Printf("WebSocket endpoint: ws://localhost:%s/api/v1/ws/:projectId", cfg.Server.Port)
+	log.Printf("Health check: http://localhost:%s/health", cfg.Server.Port)
 
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
