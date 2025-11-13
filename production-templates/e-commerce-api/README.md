@@ -232,14 +232,47 @@ GET    /api/v1/admin/users          # 사용자 관리
 ## 테스트
 
 ```bash
-# 전체 테스트
+# 전체 테스트 (race detector 포함)
 make test
 
 # 커버리지 확인
 make test-coverage
 
-# 통합 테스트
-make test-integration
+# 특정 패키지 테스트
+go test -v ./internal/repository/...
+go test -v ./internal/service/...
+
+# 테스트 벤치마크
+go test -bench=. -benchmem ./...
+```
+
+## 코드 품질 관리
+
+```bash
+# Linter 실행 (golangci-lint 필요)
+make lint
+
+# Linter 자동 수정
+make lint-fix
+
+# 코드 포맷팅
+make fmt
+
+# 전체 체크 (fmt + lint + test)
+make fmt && make lint && make test
+```
+
+### golangci-lint 설치
+
+```bash
+# macOS
+brew install golangci-lint
+
+# Linux
+curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
+
+# Docker
+docker run --rm -v $(pwd):/app -w /app golangci/golangci-lint:latest golangci-lint run
 ```
 
 ## 배포
