@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: chatapp-postgres
+    environment:
+      POSTGRES_USER: chatapp
+      POSTGRES_PASSWORD: chatapp_password
+      POSTGRES_DB: chatapp_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chatapp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: chatapp-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: chatapp-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=chatapp
+      - DB_PASSWORD=chatapp_password
+      - DB_NAME=chatapp_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=production-secret-key-change-this
+      - JWT_EXPIRATION=15
+      - MAX_FILE_SIZE=10485760
+      - UPLOAD_DIR=./uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - app_uploads:/root/uploads
+
+volumes:
+  postgres_data:
+  redis_data:
+  app_uploads:
