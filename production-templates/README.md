@@ -161,19 +161,49 @@ vim frontend/.env
 
 ### 4. Docker로 실행
 
+모든 템플릿은 Docker로 즉시 실행 가능합니다.
+
 ```bash
-# 전체 스택 실행
+# E-Commerce API
+cd e-commerce-api/docker
 docker-compose up -d
 
-# 로그 확인
+# Task Management App
+cd task-management-app/backend/docker
+docker-compose up -d
+
+# Real-Time Chat
+cd realtime-chat/backend/docker
+docker-compose up -d
+```
+
+**로컬에서 이미지 빌드:**
+
+```bash
+# E-Commerce API
+cd e-commerce-api
+docker build -t ecommerce-api:local -f docker/Dockerfile .
+
+# Task Management App
+cd task-management-app/backend
+docker build -t task-management:local -f docker/Dockerfile .
+
+# Real-Time Chat
+cd realtime-chat/backend
+docker build -t realtime-chat:local -f docker/Dockerfile .
+```
+
+**로그 확인:**
+
+```bash
 docker-compose logs -f
 ```
 
 ### 5. 접속
 
-- Frontend: http://localhost:3000 (풀스택 템플릿)
 - Backend API: http://localhost:8080
-- API Docs: http://localhost:8080/swagger
+- API Docs: http://localhost:8080/swagger (구현 예정)
+- Health Check: http://localhost:8080/health
 
 ## 템플릿 비교
 
@@ -206,24 +236,27 @@ docker-compose logs -f
 - ✅ XSS/CSRF 방지
 
 ### 인프라
-- ✅ Docker 컨테이너화
-- ✅ Docker Compose 설정
-- ✅ Kubernetes 매니페스트
-- ✅ CI/CD 파이프라인 (GitHub Actions)
-- ✅ 데이터베이스 마이그레이션
+- ✅ Docker 컨테이너화 (Multi-stage builds)
+- ✅ Docker Compose 설정 (PostgreSQL + Redis + App)
+- ✅ Docker 빌드 검증 완료 (Go 1.23)
+- ✅ 데이터베이스 마이그레이션 (SQL)
+- 📋 Kubernetes 매니페스트 (계획 중)
+- 📋 CI/CD 파이프라인 (계획 중)
+- 📋 Docker Hub 배포 (v1.0.0 예정)
 
 ### 모니터링 및 로깅
-- ✅ Prometheus 메트릭
-- ✅ 구조화된 로깅 (JSON)
+- ✅ 구조화된 로깅 (log.Printf)
 - ✅ Health check 엔드포인트
-- ✅ 성능 모니터링
+- 📋 Prometheus 메트릭 (계획 중)
+- 📋 성능 모니터링 (계획 중)
 
 ### 개발 경험
-- ✅ 핫 리로드
-- ✅ 환경 변수 관리
-- ✅ API 문서 (Swagger/OpenAPI)
-- ✅ 테스트 코드
-- ✅ Linting 및 포맷팅
+- ✅ 환경 변수 관리 (.env)
+- ✅ Makefile (build, run, test)
+- ✅ golangci-lint 설정
+- 📋 핫 리로드 (계획 중)
+- 📋 API 문서 (Swagger/OpenAPI) (계획 중)
+- 📋 테스트 코드 (계획 중)
 
 ## 사용 시나리오
 
