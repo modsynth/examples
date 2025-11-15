@@ -49,7 +49,7 @@ func (h *WebSocketHandler) HandleConnection(c *gin.Context) {
 	}
 
 	client := NewClient(h.hub, conn, uint(projectID), userID.(uint))
-	h.hub.Register(client)
+	h.hub.register <- client
 
 	go client.WritePump()
 	go client.ReadPump()

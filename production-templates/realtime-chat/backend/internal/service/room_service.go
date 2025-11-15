@@ -59,7 +59,7 @@ func (s *roomService) Create(creatorID uint, req *domain.CreateRoomRequest) (*do
 	}
 
 	// Verify creator exists
-	creator, err := s.userRepo.FindByID(creatorID)
+	_, err := s.userRepo.FindByID(creatorID)
 	if err != nil {
 		return nil, fmt.Errorf("creator not found: %w", err)
 	}

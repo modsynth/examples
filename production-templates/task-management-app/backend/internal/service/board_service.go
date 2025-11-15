@@ -175,10 +175,10 @@ func (s *boardService) checkProjectAccess(projectID, userID uint, requiredRole d
 func (s *boardService) broadcastBoardEvent(projectID, userID uint, eventType string, data interface{}) {
 	if s.hub != nil {
 		message := &websocket.Message{
-			Type:      eventType,
+			Type:      websocket.MessageType(eventType),
 			ProjectID: projectID,
 			UserID:    userID,
-			Data:      data,
+			Payload:   data,
 		}
 		s.hub.Broadcast(message)
 	}
