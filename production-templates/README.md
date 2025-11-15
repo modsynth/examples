@@ -16,82 +16,121 @@
 
 ## 사용 가능한 템플릿
 
-### 1. E-Commerce API
+### 1. E-Commerce API ✅
 
-**난이도**: ⭐⭐⭐
+**난이도**: ⭐⭐⭐ | **코드**: ~3,000 LOC | **상태**: 완료
 
 완전한 기능을 갖춘 전자상거래 REST API입니다.
 
 **주요 기능:**
-- JWT 인증 및 사용자 관리
-- 상품 관리 (CRUD)
-- 장바구니 및 주문 처리
-- Stripe 결제 통합
-- Elasticsearch 상품 검색
-- S3 이미지 저장
-- Prometheus 모니터링
-
-**사용된 모듈:** 8개 (auth-module, db-module, cache-module, logging-module, file-storage-module, payment-module, search-module, monitoring-module)
+- ✅ JWT 인증 (Access + Refresh 토큰), bcrypt 암호화
+- ✅ 사용자 관리 (등록, 로그인, 프로필)
+- ✅ 상품 관리 (CRUD, 카테고리, 이미지)
+- ✅ 장바구니 관리 (추가, 수정, 삭제)
+- ✅ 주문 처리 (트랜잭션 기반)
+- ✅ Admin 기능 (사용자/상품/주문 관리)
+- ✅ Clean Architecture (Repository, Service, Handler)
+- ✅ 테스트 코드 (Table-driven tests, golangci-lint)
 
 **기술 스택:**
-- Backend: Go, Gin, PostgreSQL, Redis, Elasticsearch
-- Infrastructure: Docker, Kubernetes
-- Payment: Stripe
+- Backend: Go 1.21, Gin, GORM, PostgreSQL
+- Security: JWT, bcrypt
+- Infrastructure: Docker (Multi-stage builds), docker-compose
+- Testing: go test, golangci-lint
 
-[자세히 보기 →](./e-commerce-api/)
+**구조:**
+- 4 Domain models (User, Product, Cart, Order)
+- 4 Repositories (데이터 접근 계층)
+- 4 Services (비즈니스 로직)
+- 5 Handlers (HTTP 엔드포인트)
+- 2 Middleware (Auth, CORS)
+- 3 SQL migrations
+
+[자세히 보기 →](./e-commerce-api/backend/README.md)
 
 ---
 
-### 2. Task Management App
+### 2. Task Management App ✅
 
-**난이도**: ⭐⭐⭐⭐
+**난이도**: ⭐⭐⭐⭐ | **코드**: ~6,000 LOC | **상태**: 완료
 
-Trello/Asana 스타일의 풀스택 작업 관리 애플리케이션입니다.
+Trello/Asana 스타일의 Kanban 작업 관리 애플리케이션입니다.
 
 **주요 기능:**
-- 칸반 보드 (드래그 앤 드롭)
-- 실시간 협업 (WebSocket)
-- 프로젝트 및 팀 관리
-- 작업 할당 및 추적
-- 이메일 알림
-- 첨부 파일 지원
-- 다국어 지원
-
-**사용된 모듈:** 17개 (Backend 8개 + Frontend 9개)
+- ✅ JWT 인증 (Access + Refresh 토큰), bcrypt 암호화
+- ✅ 프로젝트 관리 (생성, 수정, 아카이브)
+- ✅ 역할 기반 접근 제어 (Owner > Admin > Member > Viewer)
+- ✅ 멤버 관리 (초대, 역할 변경, 제거)
+- ✅ 칸반 보드 (CRUD, 위치 조정)
+- ✅ 태스크 관리 (생성, 이동, 할당, 우선순위)
+- ✅ 태스크 댓글 시스템
+- ✅ 체크리스트 (항목 추가, 토글, 삭제)
+- ✅ 라벨 시스템 (색상 코딩)
+- ✅ 실시간 협업 (WebSocket 기반)
+- ✅ Clean Architecture (Repository, Service, Handler)
+- ✅ 테스트 코드 (Table-driven tests, golangci-lint)
 
 **기술 스택:**
-- Backend: Go, PostgreSQL, Redis, WebSocket
-- Frontend: React, TypeScript, Redux, Tailwind CSS
-- Infrastructure: Docker, Kubernetes
+- Backend: Go 1.21, Gin, GORM, PostgreSQL
+- WebSocket: gorilla/websocket (실시간 협업)
+- Security: JWT, bcrypt
+- Infrastructure: Docker (Multi-stage builds), docker-compose
+- Testing: go test, golangci-lint
 
-[자세히 보기 →](./task-management-app/)
+**구조:**
+- 4 Domain models (User, Project, Board, Task)
+- 4 Repositories (데이터 접근 계층)
+- 4 Services (비즈니스 로직 + WebSocket 브로드캐스팅)
+- 4 Handlers (30+ HTTP 엔드포인트)
+- 3 Middleware (Auth, CORS, Logger)
+- WebSocket Hub (프로젝트 기반 룸 관리)
+- 4 SQL migrations
+
+[자세히 보기 →](./task-management-app/backend/README.md)
 
 ---
 
-### 3. Real-Time Chat
+### 3. Real-Time Chat ✅
 
-**난이도**: ⭐⭐⭐⭐⭐
+**난이도**: ⭐⭐⭐⭐⭐ | **코드**: ~4,500 LOC | **상태**: 완료
 
 Slack/Discord 스타일의 실시간 채팅 애플리케이션입니다.
 
 **주요 기능:**
-- 실시간 메시징 (WebSocket)
-- 채널 및 다이렉트 메시지
-- 음성/영상 통화 (WebRTC)
-- 타이핑 인디케이터
-- 읽음 표시
-- 메시지 검색 (Elasticsearch)
-- 파일 공유
-- 이모지 반응
-
-**사용된 모듈:** 19개 (Backend 10개 + Frontend 9개)
+- ✅ JWT 인증 (Access + Refresh 토큰), bcrypt 암호화
+- ✅ 실시간 메시징 (WebSocket 기반)
+- ✅ 룸 타입 (Direct 1:1, Group, Public 채널)
+- ✅ 다이렉트 메시지 (자동 룸 생성)
+- ✅ 메시지 반응 (이모지 리액션)
+- ✅ 답장 기능 (스레드 형태)
+- ✅ 메시지 수정/삭제 (소프트 삭제)
+- ✅ 읽음 확인 (ReadReceipt 추적)
+- ✅ 타이핑 표시기 (실시간 타이핑 상태)
+- ✅ 사용자 상태 (Online/Away/Busy/Offline)
+- ✅ 읽지 않은 메시지 카운트
+- ✅ 참가자 관리 (추가, 제거, 음소거)
+- ✅ Clean Architecture (Repository, Service, Handler)
+- ✅ 테스트 코드 준비 (golangci-lint)
 
 **기술 스택:**
-- Backend: Go, PostgreSQL, Redis, RabbitMQ, Elasticsearch
-- Frontend: React, TypeScript, Redux, WebRTC
-- Infrastructure: Docker, Kubernetes
+- Backend: Go 1.21, Gin, GORM, PostgreSQL
+- WebSocket: gorilla/websocket (룸 기반 브로드캐스팅)
+- Caching: Redis 7 (사용자 상태, 세션)
+- Security: JWT, bcrypt
+- Infrastructure: Docker (Multi-stage builds), docker-compose
+- Testing: go test, golangci-lint
 
-[자세히 보기 →](./real-time-chat/)
+**구조:**
+- 3 Domain models (User, Room, Message)
+- 3 Repositories (고급 쿼리: Direct 룸 조회, 읽지 않은 메시지)
+- 3 Services (비즈니스 로직 + WebSocket 이벤트)
+- 3 Handlers (40+ HTTP 엔드포인트)
+- WebSocket Hub (룸 기반 메시지 브로드캐스팅)
+- WebSocket Client (Ping/Pong 관리)
+- 15+ WebSocket 메시지 타입
+- 4 SQL migrations
+
+[자세히 보기 →](./realtime-chat/backend/README.md)
 
 ---
 
@@ -140,18 +179,18 @@ docker-compose logs -f
 
 | 기능 | E-Commerce API | Task Management | Real-Time Chat |
 |------|----------------|-----------------|----------------|
-| **타입** | Backend API | Fullstack | Fullstack |
+| **타입** | Backend API | Backend API | Backend API |
 | **난이도** | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| **모듈 수** | 8개 | 17개 | 19개 |
+| **코드 규모** | ~3,000 LOC | ~6,000 LOC | ~4,500 LOC |
+| **상태** | ✅ 완료 | ✅ 완료 | ✅ 완료 |
 | **WebSocket** | ❌ | ✅ | ✅ |
 | **실시간** | ❌ | ✅ | ✅ |
-| **결제** | ✅ Stripe | ❌ | ❌ |
-| **검색** | ✅ ES | ❌ | ✅ ES |
-| **파일 저장** | ✅ S3 | ✅ S3 | ✅ S3 |
-| **알림** | ❌ | ✅ Email | ✅ Push |
-| **WebRTC** | ❌ | ❌ | ✅ |
-| **메시징** | ❌ | ❌ | ✅ RabbitMQ |
-| **다국어** | ❌ | ✅ | ❌ |
+| **역할 제어** | ❌ | ✅ RBAC | ✅ |
+| **메시지 반응** | ❌ | ❌ | ✅ |
+| **읽음 확인** | ❌ | ❌ | ✅ |
+| **타이핑 표시** | ❌ | ❌ | ✅ |
+| **사용자 상태** | ❌ | ❌ | ✅ |
+| **Docker** | ✅ | ✅ | ✅ |
 | **프로덕션** | ✅ | ✅ | ✅ |
 
 ## 공통 기능
